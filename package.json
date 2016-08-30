@@ -3,13 +3,17 @@
   "version": "1.0.0",
   "description": "A small tool make daily report easier",
   "main": "index.js",
-  "scripts": {
-  },
+  "scripts": {},
   "keywords": [
     "trello",
     "slack",
     "report",
     "tool"
   ],
-  "author": "Ferrari Lee <shiyung@gmail.com>"
+  "author": "Ferrari Lee <shiyung@gmail.com>",
+  "dependencies": {
+    "@slack/client": "^3.5.4",
+    "got": "^6.3.0",
+    "lodash": "^4.15.0"
+  }
 }
