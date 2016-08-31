@@ -2,27 +2,27 @@
 
 const _ = require('lodash')
 const got = require('got')
+const FormData = require('form-data')
 const config = require('./auth.json')
 const TRELLO = 'https://api.trello.com/1'
-const SLACK = 'https://slack.com/api/files,upload'
+const SLACK_UPLOADFILE = 'https://slack.com/api/files.upload'
 
-const TRELLO_BOARD = process.env.BOARD || config.TRELLO.BOARD
-const ONEDAY  = new Date(new Date().getTime() - 86400000)
+const ONEDAY = new Date(new Date().getTime() - 86400000)
 
-function generateReport(data) {
+function generateReport (data) {
   let report = {}
 
   data.forEach((action) => {
-    if (_.has(action, 'data.board.id') && _.has(action, 'data.card.id')) {
-      let id = `${action.data.board.id}:${action.data.card.id}`
+    if (_.has(action, 'data.card.name') && _.has(action, 'data.card.shortLink')) {
+      // console.log(action.data)
+      let id = `${action.data.card.shortLink}:${action.data.card.name}`
       let message = (_.has(action, 'data.text'))
-        ? `${action.type} - ${action.data.text}`
-        : `${action.type}`
+        ? `${action.type} - ${action.data.text}  `
+        : `${action.type}  `
 
       if (!_.has(report, id)) {
         let data = []
         data.push(message)
-        console.log('add', data)
         report[id] = data
       } else {
         let data = report[id]
@@ -32,12 +32,40 @@ function generateReport(data) {
     }
   })
 
-  console.log(report)
   return report
 }
 
-function submitReport() {
+function parseReportToContent (report) {
+  let content = []
 
+  _.forEach(report, (val, key) => {
+    let title = key.split(':')
+    if (title.length === 2 && Array.isArray(val)) {
+      content.push(`[${title[1]}](https://trello.com/c/${title[0]})`)
+      content = _.concat(content, val)
+    } else {
+      console.error(`ERROR report: ${key}`)
+    }
+  })
+
+  return content.join('\n')
+}
+
+function submitReport (report) {
+  const form = new FormData()
+  form.append('content', report)
+  form.append('filetype', 'post')
+  form.append('filename', `${ONEDAY.getTime()}_Report.md`)
+  form.append('title', `${ONEDAY} Report`)
+  form.append('channels', config.SLACK.CHANNEL)
+  form.append('token', config.SLACK.TOKEN)
+  console.log(form)
+
+  return got.post(SLACK_UPLOADFILE, {
+    headers: form.getHeaders(),
+    body: form,
+    json: true
+  })
 }
 
 got.get(`${TRELLO}/members/me/actions?key=${config.TRELLO.KEY}&token=${config.TRELLO.TOKEN}`, {
@@ -48,15 +76,20 @@ got.get(`${TRELLO}/members/me/actions?key=${config.TRELLO.KEY}&token=${config.TR
     for (let i in resp.body) {
       let item = resp.body[i]
       if (new Date(item.date) > ONEDAY) {
-        console.log(item.data)
         dailyData.push(item)
       } else {
         break
       }
     }
 
-    let content = generateReport(dailyData)
-    // console.log(dailyData)
+    let report = generateReport(dailyData)
+    let content = parseReportToContent(report)
+    submitReport(content).then((resp) => {
+      console.log(resp)
+      console.log(`Create ${ONEDAY} Daily Report`)
+    }).catch((err) => {
+      console.error(err)
+    })
   } else {
     console.error('Error Trello Format')
   }

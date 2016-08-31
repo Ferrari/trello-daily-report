@@ -13,6 +13,7 @@
   "author": "Ferrari Lee <shiyung@gmail.com>",
   "dependencies": {
     "@slack/client": "^3.5.4",
+    "form-data": "^1.0.1",
     "got": "^6.3.0",
     "lodash": "^4.15.0"
   }
