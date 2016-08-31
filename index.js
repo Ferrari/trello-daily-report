@@ -14,11 +14,10 @@ function generateReport (data) {
 
   data.forEach((action) => {
     if (_.has(action, 'data.card.name') && _.has(action, 'data.card.shortLink')) {
-      // console.log(action.data)
       let id = `${action.data.card.shortLink}:${action.data.card.name}`
       let message = (_.has(action, 'data.text'))
-        ? `${action.type} - ${action.data.text}  `
-        : `${action.type}  `
+        ? `* ${action.type} - ${action.data.text}`
+        : `* ${action.type}`
 
       if (!_.has(report, id)) {
         let data = []
@@ -41,7 +40,7 @@ function parseReportToContent (report) {
   _.forEach(report, (val, key) => {
     let title = key.split(':')
     if (title.length === 2 && Array.isArray(val)) {
-      content.push(`[${title[1]}](https://trello.com/c/${title[0]})`)
+      content.push(`### [${title[1]}](https://trello.com/c/${title[0]})`)
       content = _.concat(content, val)
     } else {
       console.error(`ERROR report: ${key}`)
@@ -85,7 +84,7 @@ got.get(`${TRELLO}/members/me/actions?key=${config.TRELLO.KEY}&token=${config.TR
     let report = generateReport(dailyData)
     let content = parseReportToContent(report)
     submitReport(content).then((resp) => {
-      console.log(resp)
+      console.log(resp.body)
       console.log(`Create ${ONEDAY} Daily Report`)
     }).catch((err) => {
       console.error(err)
